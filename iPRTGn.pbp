@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project xmlns="http://www.purebasic.com/namespace" version="1.0" creator="PureBasic 5.31 (MacOS X - x64)">
+  <section name="config">
+    <options closefiles="1" openmode="0" name="iPRTGn"/>
+  </section>
+  <section name="data">
+    <explorer view="../../" pattern="0"/>
+    <log show="1"/>
+    <lastopen date="2015-05-22 19:05" user="deseven" host="de7air.local"/>
+  </section>
+  <section name="files">
+    <file name="const.pb">
+      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
+      <fingerprint md5="a7687c1b38f52d56377c015893767ff5"/>
+    </file>
+    <file name="main.pb">
+      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
+      <fingerprint md5="c958bd6eabfc4ab09f4c8cd366a46a32"/>
+    </file>
+    <file name="proc.pb">
+      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
+      <fingerprint md5="a66966b05fe2e978e6ee17052a805947"/>
+    </file>
+  </section>
+  <section name="targets">
+    <target name="Default Target" enabled="1" default="1">
+      <inputfile value="main.pb"/>
+      <outputfile value="iPRTGn.app"/>
+      <executable value="iPRTGn.app"/>
+      <options thread="1" xpskin="1" debug="1"/>
+      <temporaryexe value="source"/>
+      <icon enable="1">img/main.icns</icon>
+      <tools>TN_INJECT,TN_INJECT_BUILD</tools>
+    </target>
+  </section>
+</project>
