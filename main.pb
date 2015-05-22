@@ -104,7 +104,7 @@ Repeat
         Default
           If EventMenu() <= ListSize(custom())+1
             SelectElement(custom(),EventMenu()-1)
-            RunProgram("open","http://" + myhost + "/sensor.htm?id=" + custom()\id,"")
+            RunProgram("open","http://" + myhost + "/sensor.htm?id=" + custom()\id + "#tab3","")
           EndIf
       EndSelect
   EndSelect

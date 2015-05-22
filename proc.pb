@@ -173,7 +173,9 @@ Procedure checkPRTG(resData.s)
       If curAlerts : msg = Left(msg,Len(msg)-2) + "]" : EndIf
       ;Debug curAlerts
       If curAlerts <> alertsCount And msg <> curMsg
-        notify(msg,"http://" + myhost + "/alarms.htm?filter_status=5&filter_status=4&filter_status=10&filter_status=13&filter_status=14")
+        If curAlerts
+          notify(msg,"http://" + myhost + "/alarms.htm?filter_status=5&filter_status=4&filter_status=10&filter_status=13&filter_status=14")
+        EndIf  
         SetMenuItemText(#menu,#info,"Alerts: " + Str(curAlerts))
         alertsCount = curAlerts
         curMsg = msg
