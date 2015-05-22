@@ -98,7 +98,7 @@ EndProcedure
 
 Procedure getStat(dummy)
   Shared statData.s,myhost.s,mylogin.s,mypass.s
-  url.s = "http://" + myhost + "/api/getstatus.htm?username=" + mylogin + "&password=" + mypass
+  url.s = "http://" + myhost + "/api/table.json?content=sensors&output=json&columns=sensor&filter_status=5&username=" + mylogin + "&password=" + mypass
   statData = getData(url)
 EndProcedure
 
@@ -150,7 +150,8 @@ Procedure parseCustom()
 EndProcedure
 
 Procedure checkPRTG(resData.s)
-  Shared myhost.s,mylogin.s,mypass.s,wndHidden.b,state.b,alertsCount.l,curIcon.b
+  Shared myhost.s,mylogin.s,mypass.s,wndHidden.b,state.b,alertsCount.l,curIcon.b,curMsg.s
+  Protected msg.s
   If FindString(resData,"Unauthorized")
     MessageRequester(#myname,"Login/password is incorrect!")
     mylogin = ""
@@ -160,15 +161,24 @@ Procedure checkPRTG(resData.s)
   ElseIf Len(resData)
     If ParseJSON(0,resData,#PB_JSON_NoCase)
       curIcon = #ok
-      NewMap PRTGData.s()
-      ExtractJSONMap(JSONValue(0),PRTGData())
-      curAlerts = Val(PRTGData("Alarms"))
+      NewMap PRTGData()
+      ExtractJSONStructure(JSONValue(0),@alerts.alerts,alerts)
+      curAlerts = alerts\treesize
+      msg = "Alerts: " + Str(curAlerts)
+      If curAlerts : msg + Chr(13) + "[" : EndIf
+      ForEach alerts\sensors()
+        Debug alerts\sensors()\sensor
+        msg + alerts\sensors()\sensor + ", "
+      Next
+      If curAlerts : msg = Left(msg,Len(msg)-2) + "]" : EndIf
       ;Debug curAlerts
-      If curAlerts <> alertsCount
-        notify("Alerts: " + Str(curAlerts),"http://" + myhost + "/alarms.htm?filter_status=5&filter_status=4&filter_status=10&filter_status=13&filter_status=14")
+      If curAlerts <> alertsCount And msg <> curMsg
+        notify(msg,"http://" + myhost + "/alarms.htm?filter_status=5&filter_status=4&filter_status=10&filter_status=13&filter_status=14")
         SetMenuItemText(#menu,#info,"Alerts: " + Str(curAlerts))
         alertsCount = curAlerts
+        curMsg = msg
       EndIf
+      FreeJSON(0)
     Else
       curIcon = #okconn
       ProcedureReturn

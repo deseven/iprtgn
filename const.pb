@@ -1,5 +1,5 @@
 ﻿#myname = "iPRTGn"
-#myver = "0.3.1"
+#myver = "0.4.0"
 #mydefhost = "monitoring.home-nadym.ru:12345"
 #mydefutime = 30
 #seed = 10100100011
@@ -65,6 +65,16 @@ Structure sensor
   name.s
   lastvalue.s
   sData.s
+EndStructure
+
+Structure alertSensor
+  sensor.s
+EndStructure
+
+Structure alerts
+  ver.s
+  treesize.l
+  List sensors.alertSensor()
 EndStructure
 
 DataSection

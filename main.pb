@@ -5,7 +5,7 @@ IncludeFile "curl/libcurl-res.pb"
 IncludeFile "curl/libcurl-inc.pb"
 IncludeFile "const.pb"
 mydir.s = GetPathPart(ProgramFilename())
-Define myhost.s,mylogin.s,mypass.s,myutime.l,shittyicons.b,state.b,alertsCount.l,curIcon.b,curIconSet.b,customSensors.s
+Define myhost.s,mylogin.s,mypass.s,myutime.l,shittyicons.b,state.b,alertsCount.l,curIcon.b,curIconSet.b,customSensors.s,curMsg.s
 Define statData.s,statThread.i,customThread.i
 lastCheck.i = 0
 lastTrayUpdate.i = 0
