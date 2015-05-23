@@ -1,7 +1,24 @@
-﻿
+﻿Declare.s encDec(string.s,mode.b)
+Declare Die()
+Declare settings(mode.b)
+Declare createIcons()
+Declare createShittyIcons()
+Declare notify(msg.s,url.s)
+Declare.s getData(url.s)
+Declare getStat(dummy)
+Declare getCustom(dummy)
+Declare buildCustom()
+Declare parseCustom()
+Declare checkPRTG(resData.s)
+Declare menuActions()
+Declare buildMenu()
+Declare updateMenu()
+Declare trayUpdate()
+Declare check()
+
 Procedure.s encDec(string.s,mode.b)
   If Len(string)
-    res.s = Space(1024)
+    Protected res.s = Space(1024)
     If mode = #encode
       Base64Encoder(@string,StringByteLength(string),@res,1024)
     Else
@@ -17,7 +34,7 @@ EndProcedure
 
 Procedure settings(mode.b)
   Shared myhost.s,mylogin.s,mypass.s,myutime.l,shittyicons.b,customSensors.s
-  config.s = GetEnvironmentVariable("HOME") + "/.config"
+  Protected config.s = GetEnvironmentVariable("HOME") + "/.config"
   If FileSize(config) <> -2 : CreateDirectory(config) : EndIf
   config + "/iPRTGn"
   If FileSize(config) <> -2 : CreateDirectory(config) : EndIf
@@ -98,24 +115,27 @@ EndProcedure
 
 Procedure getStat(dummy)
   Shared statData.s,myhost.s,mylogin.s,mypass.s
-  url.s = "http://" + myhost + "/api/table.json?content=sensors&output=json&columns=sensor&filter_status=5&username=" + mylogin + "&password=" + mypass
+  Protected url.s = "http://" + myhost + "/api/table.json?content=sensors&output=json&columns=sensor&filter_status=5&username=" + mylogin + "&password=" + mypass
   statData = getData(url)
 EndProcedure
 
 Procedure getCustom(dummy)
-  Shared myhost.s,mylogin.s,mypass.s,custom.sensor()
+  Shared globalLock.i,myhost.s,mylogin.s,mypass.s,custom.sensor()
+  LockMutex(globalLock)
   ForEach custom()
-    url.s = "http://" + myhost + "/api/getsensordetails.xml?id=" + custom()\id + "&username=" + mylogin + "&password=" + mypass
+    Protected url.s = "http://" + myhost + "/api/getsensordetails.xml?id=" + custom()\id + "&username=" + mylogin + "&password=" + mypass
     custom()\sData = getData(url)
   Next
+  UnlockMutex(globalLock)
 EndProcedure
 
 Procedure buildCustom()
-  Shared custom.sensor()
+  Shared globalLock.i,custom.sensor()
+  LockMutex(globalLock)
   ClearList(custom())
-  sensors.s = GetGadgetText(#custom)
+  Protected i.i,sensor.s,sensors.s = GetGadgetText(#custom)
   If Len(sensors)
-    numOfSensors.b = CountString(GetGadgetText(#custom),",") + 1
+    Protected numOfSensors.b = CountString(GetGadgetText(#custom),",") + 1
     If numOfSensors
       For i = 1 To numOfSensors
         sensor.s = StringField(sensors,i,",")
@@ -126,13 +146,15 @@ Procedure buildCustom()
       Next
     EndIf
   EndIf
+  UnlockMutex(globalLock)
 EndProcedure
 
 Procedure parseCustom()
-  Shared custom.sensor()
+  Shared globalLock.i,custom.sensor()
   CreateRegularExpression(#name,"<name>\s*<!\[CDATA\[(.*)\]\]>\s*<\/name>")
   CreateRegularExpression(#lastvalue,"<lastvalue>\s*<!\[CDATA\[(.*)\]\]>\s*<\/lastvalue>")
   ;Debug custom()\sData
+  LockMutex(globalLock)
   ForEach custom()
     If ExamineRegularExpression(#name,custom()\sData)
       If NextRegularExpressionMatch(#name)
@@ -145,6 +167,7 @@ Procedure parseCustom()
       EndIf
     EndIf
   Next
+  UnlockMutex(globalLock)
   FreeRegularExpression(#name)
   FreeRegularExpression(#lastvalue)
 EndProcedure
@@ -162,8 +185,9 @@ Procedure checkPRTG(resData.s)
     If ParseJSON(0,resData,#PB_JSON_NoCase)
       curIcon = #ok
       NewMap PRTGData()
+      Protected alerts.alerts
       ExtractJSONStructure(JSONValue(0),@alerts.alerts,alerts)
-      curAlerts = alerts\treesize
+      Protected curAlerts = alerts\treesize
       msg = "Alerts: " + Str(curAlerts)
       If curAlerts : msg + Chr(13) + "[" : EndIf
       ForEach alerts\sensors()
@@ -175,12 +199,12 @@ Procedure checkPRTG(resData.s)
       If curAlerts <> alertsCount And msg <> curMsg
         If curAlerts
           notify(msg,"http://" + myhost + "/alarms.htm?filter_status=5&filter_status=4&filter_status=10&filter_status=13&filter_status=14")
-        EndIf  
-        SetMenuItemText(#menu,#info,"Alerts: " + Str(curAlerts))
+        EndIf
         alertsCount = curAlerts
         curMsg = msg
       EndIf
       FreeJSON(0)
+      SetMenuItemText(#menu,#info,FormatDate("[%hh:%ii:%ss %dd.%mm.%yy] ",Date()) + "Alerts: " + Str(curAlerts))
     Else
       curIcon = #okconn
       ProcedureReturn
@@ -191,24 +215,65 @@ Procedure checkPRTG(resData.s)
   EndIf
 EndProcedure
 
+Procedure menuActions()
+  Shared globalLock.i,myhost.s,wndHidden.b,state.b,custom.sensor()
+  Select EventMenu()
+    Case #info
+      RunProgram("open","http://" + myhost + "/alarms.htm?filter_status=5&filter_status=4&filter_status=10&filter_status=13&filter_status=14","")
+    Case #about
+      MessageRequester(#myname,"v." + #myver + #CRLF$ + "written by deseven, 2015")
+    Case #settings
+      state = #sErr
+      HideWindow(#wnd,#False,#PB_Window_ScreenCentered) : wndHidden = #False
+    Case #exit
+      Die()
+    Case #enter
+      If Not wndHidden
+        settings(#save)
+        HideWindow(#wnd,#True) : wndHidden = #True
+        check()
+      EndIf
+    Default
+      LockMutex(globalLock)
+      If EventMenu() <= ListSize(custom())+1
+        SelectElement(custom(),EventMenu()-1)
+        RunProgram("open","http://" + myhost + "/sensor.htm?id=" + custom()\id + "#tab3","")
+      EndIf
+      UnlockMutex(globalLock)
+  EndSelect
+EndProcedure
+
 Procedure buildMenu()
-  Shared ItemLength.CGFloat,StatusBar.i,StatusItem.i,curIconSet.b,curAlerts.l,custom.sensor()
+  Shared globalLock.i,ItemLength.CGFloat,StatusBar.i,StatusItem.i,curIconSet.b,alertsCount.l,custom.sensor()
   If Not (StatusBar And StatusItem)
     ItemLength.CGFloat = 32
-    StatusBar.i = CocoaMessage(0, 0, "NSStatusBar systemStatusBar")
-    StatusItem.i = CocoaMessage(0, CocoaMessage(0, StatusBar, "statusItemWithLength:", #NSSquareStatusBarItemLength), "retain")
+    StatusBar.i = CocoaMessage(0,0,"NSStatusBar systemStatusBar")
+    StatusItem.i = CocoaMessage(0,CocoaMessage(0,StatusBar,"statusItemWithLength:",#NSSquareStatusBarItemLength), "retain")
   EndIf
   If IsMenu(#menu) : FreeMenu(#menu) : EndIf
   CreatePopupMenu(#menu)
-  MenuItem(#info,"Alerts: " + Str(curAlerts))
+  MenuItem(#info,"Alerts: " + Str(alertsCount))
+  BindMenuEvent(#menu,#info,@menuActions())
   MenuBar()
+  LockMutex(globalLock)
   ForEach custom()
     MenuItem(ListIndex(custom())+1,custom()\id + " - updating...")
+    UnbindMenuEvent(#menu,ListIndex(custom())+1,@menuActions())
+    BindMenuEvent(#menu,ListIndex(custom())+1,@menuActions())
   Next
+  UnlockMutex(globalLock)
   MenuBar()
   MenuItem(#about,"About")
+  UnbindMenuEvent(#menu,#about,@menuActions())
+  BindMenuEvent(#menu,#about,@menuActions())
   MenuItem(#settings,"Settings")
+  UnbindMenuEvent(#menu,#settings,@menuActions())
+  BindMenuEvent(#menu,#settings,@menuActions())
   MenuItem(#exit,"Exit")
+  UnbindMenuEvent(#menu,#exit,@menuActions())
+  BindMenuEvent(#menu,#exit,@menuActions())
+  UnbindMenuEvent(#menu,#enter,@menuActions())
+  BindMenuEvent(#menu,#enter,@menuActions())
   CocoaMessage(0,StatusItem,"setHighlightMode:",@"YES")
   CocoaMessage(0,StatusItem,"setLength:@",@ItemLength)
   CocoaMessage(0,StatusItem,"setImage:",ImageID(curIconSet))
@@ -216,8 +281,9 @@ Procedure buildMenu()
 EndProcedure
 
 Procedure updateMenu()
-  Shared custom.sensor()
+  Shared globalLock.i,custom.sensor()
   Protected text.s
+  LockMutex(globalLock)
   ForEach custom()
     If Len(custom()\lastvalue)
       text = "[" + custom()\lastvalue + "] "
@@ -231,6 +297,7 @@ Procedure updateMenu()
     EndIf
     SetMenuItemText(#menu,ListIndex(custom())+1,text)
   Next
+  UnlockMutex(globalLock)
 EndProcedure
 
 Procedure trayUpdate()

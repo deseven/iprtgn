@@ -1,14 +1,17 @@
-﻿
-; init
+﻿; init
+EnableExplicit
 UsePNGImageDecoder()
 IncludeFile "curl/libcurl-res.pb"
 IncludeFile "curl/libcurl-inc.pb"
 IncludeFile "const.pb"
-mydir.s = GetPathPart(ProgramFilename())
-Define myhost.s,mylogin.s,mypass.s,myutime.l,shittyicons.b,state.b,alertsCount.l,curIcon.b,curIconSet.b,customSensors.s,curMsg.s
+Define mydir.s = GetPathPart(ProgramFilename())
+Define myhost.s,mylogin.s,mypass.s,myutime.l,shittyicons.b,state.b,alertsCount.l,curIcon.b,curIconSet.b,customSensors.s,curMsg.s,wndHidden.b
+Define ItemLength.CGFloat,StatusBar.i,StatusItem.i
 Define statData.s,statThread.i,customThread.i
-lastCheck.i = 0
-lastTrayUpdate.i = 0
+Define globalLock.i = CreateMutex()
+Define lastCheck.i = 0
+Define lastTrayUpdate.i = 0
+Define dummy.i
 NewList custom.sensor()
 IncludeFile "proc.pb"
 settings(#load)
@@ -40,7 +43,7 @@ AddKeyboardShortcut(#wnd,#PB_Shortcut_Return,#enter)
 StickyWindow(#wnd,#True)
 
 Repeat
-  ev = WaitWindowEvent(100)
+  Define ev = WaitWindowEvent(100)
   If CocoaMessage(0,WindowID(#wnd),"isVisible") And wndHidden
     HideWindow(#wnd,#True)
     RunProgram("open","http://" + myhost,"")
@@ -84,29 +87,6 @@ Repeat
         HideWindow(#wnd,#True) : wndHidden = #True
         check()
       EndIf
-    Case #PB_Event_Menu
-      Select EventMenu()
-        Case #info
-          RunProgram("open","http://" + myhost + "/alarms.htm?filter_status=5&filter_status=4&filter_status=10&filter_status=13&filter_status=14","")
-        Case #about
-          MessageRequester(#myname,"v." + #myver + #CRLF$ + "written by deseven, 2015")
-        Case #settings
-          state = #sErr
-          HideWindow(#wnd,#False,#PB_Window_ScreenCentered) : wndHidden = #False
-        Case #exit
-          Break
-        Case #enter
-          If Not wndHidden
-            settings(#save)
-            HideWindow(#wnd,#True) : wndHidden = #True
-            check()
-          EndIf
-        Default
-          If EventMenu() <= ListSize(custom())+1
-            SelectElement(custom(),EventMenu()-1)
-            RunProgram("open","http://" + myhost + "/sensor.htm?id=" + custom()\id + "#tab3","")
-          EndIf
-      EndSelect
   EndSelect
 ForEver
 
