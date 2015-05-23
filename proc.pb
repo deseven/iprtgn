@@ -1,5 +1,6 @@
 ﻿Declare.s encDec(string.s,mode.b)
 Declare Die()
+Declare.s buildTime(time.i)
 Declare settings(mode.b)
 Declare createIcons()
 Declare createShittyIcons()
@@ -30,6 +31,15 @@ EndProcedure
 
 Procedure Die()
   End 0
+EndProcedure
+
+Procedure.s buildTime(time.i)
+  time/1000
+  If time => 60
+    time/60
+    ProcedureReturn Str(time) + " min ago"
+  EndIf
+  ProcedureReturn Str(time) + " sec ago"
 EndProcedure
 
 Procedure settings(mode.b)
@@ -173,7 +183,7 @@ Procedure parseCustom()
 EndProcedure
 
 Procedure checkPRTG(resData.s)
-  Shared myhost.s,mylogin.s,mypass.s,wndHidden.b,state.b,alertsCount.l,curIcon.b,curMsg.s
+  Shared myhost.s,mylogin.s,mypass.s,wndHidden.b,state.b,alertsCount.l,curIcon.b,curMsg.s,lastSuccessCheck.i
   Protected msg.s
   If FindString(resData,"Unauthorized")
     MessageRequester(#myname,"Login/password is incorrect!")
@@ -204,7 +214,8 @@ Procedure checkPRTG(resData.s)
         curMsg = msg
       EndIf
       FreeJSON(0)
-      SetMenuItemText(#menu,#info,FormatDate("[%hh:%ii:%ss %dd.%mm.%yy] ",Date()) + "Alerts: " + Str(curAlerts))
+      SetMenuItemText(#menu,#info,"Alerts: " + Str(curAlerts))
+      lastSuccessCheck = ElapsedMilliseconds()
     Else
       curIcon = #okconn
       ProcedureReturn

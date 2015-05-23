@@ -10,6 +10,7 @@ Define ItemLength.CGFloat,StatusBar.i,StatusItem.i
 Define statData.s,statThread.i,customThread.i
 Define globalLock.i = CreateMutex()
 Define lastCheck.i = 0
+Define lastSuccessCheck.i = 0
 Define lastTrayUpdate.i = 0
 Define dummy.i
 NewList custom.sensor()
@@ -62,6 +63,13 @@ Repeat
       ForEach custom()
         Debug "[" + custom()\id + "," + custom()\name + "," + custom()\lastvalue + "]"
       Next
+      If lastSuccessCheck
+        If lastSuccessCheck < ElapsedMilliseconds() - myutime
+          SetMenuItemText(#menu,#info,"Alerts: " + Str(alertsCount) + " (" + buildTime(ElapsedMilliseconds()-lastSuccessCheck) + ")")
+        EndIf
+      Else
+        SetMenuItemText(#menu,#info,"Alerts: " + Str(alertsCount) + " - updating...")
+      EndIf
       lastCheck = ElapsedMilliseconds()
       statThread = 0
       customThread = 0
