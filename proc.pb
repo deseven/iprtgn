@@ -4,7 +4,7 @@ Declare.s buildTime(time.i)
 Declare settings(mode.b)
 Declare createIcons()
 Declare createShittyIcons()
-Declare notify(msg.s,url.s)
+Declare notify(alerts.l,msg.s,url.s)
 Declare.s getData(url.s)
 Declare getStat(dummy)
 Declare getCustom(dummy)
@@ -104,10 +104,10 @@ Procedure createShittyIcons()
   CatchImage(#alert,?imgShittyAlert)
 EndProcedure
 
-Procedure notify(msg.s,url.s)
+Procedure notify(alerts.l,msg.s,url.s)
   Shared mydir.s,myhost.s
-  Protected args.s = "-group iPRTGn -title iPRTGn -message " + #DQUOTE$ + msg + #DQUOTE$ + " -open " + #DQUOTE$ + url + #DQUOTE$
-  ;Debug args
+  Protected args.s = "-group iPRTGn -title " + #DQUOTE$ + "Alerts: " + Str(alerts) + #DQUOTE$ + " -message " + #DQUOTE$ + msg + #DQUOTE$ + " -open " + #DQUOTE$ + url + #DQUOTE$
+  Debug args
   RunProgram(mydir + "iPRTGn.app/Contents/MacOS/terminal-notifier",args,mydir + "iPRTGn.app/")
 EndProcedure
 
@@ -198,17 +198,16 @@ Procedure checkPRTG(resData.s)
       Protected alerts.alerts
       ExtractJSONStructure(JSONValue(0),@alerts.alerts,alerts)
       Protected curAlerts = alerts\treesize
-      msg = "Alerts: " + Str(curAlerts)
-      If curAlerts : msg + Chr(13) + "[" : EndIf
       ForEach alerts\sensors()
         Debug alerts\sensors()\sensor
         msg + alerts\sensors()\sensor + ", "
       Next
-      If curAlerts : msg = Left(msg,Len(msg)-2) + "]" : EndIf
+      If curAlerts : msg = Left(msg,Len(msg)-2) : EndIf
       ;Debug curAlerts
+      ;Debug msg
       If curAlerts <> alertsCount And msg <> curMsg
         If curAlerts
-          notify(msg,"http://" + myhost + "/alarms.htm?filter_status=5&filter_status=4&filter_status=10&filter_status=13&filter_status=14")
+          notify(curAlerts,msg,"http://" + myhost + "/alarms.htm?filter_status=5&filter_status=4&filter_status=10&filter_status=13&filter_status=14")
         EndIf
         alertsCount = curAlerts
         curMsg = msg
