@@ -1,5 +1,5 @@
 ﻿#myname = "iPRTGn"
-#myver = "0.5.2"
+#myver = "0.6.0"
 #mydefhost = "monitoring.home-nadym.ru:12345"
 #mydefutime = 30
 #seed = 10100100011
@@ -19,10 +19,17 @@ Enumeration main
   #apply
   #cancel
   #shittyicons
+  #notifytype
   #custom
   #fMain
   #fAdd
   #fCustom
+EndEnumeration
+
+Enumeration notifyType
+  #device
+  #sensor
+  #both
 EndEnumeration
 
 Enumeration state
@@ -69,6 +76,7 @@ EndStructure
 
 Structure alertSensor
   sensor.s
+  device.s
 EndStructure
 
 Structure alerts

@@ -30,6 +30,9 @@ Procedure.s encDec(string.s,mode.b)
 EndProcedure
 
 Procedure Die()
+  Shared statThread.i,customThread.i
+  If IsThread(statThread) : KillThread(statThread) : EndIf
+  If IsThread(customThread) : KillThread(customThread) : EndIf
   End 0
 EndProcedure
 
@@ -43,7 +46,7 @@ Procedure.s buildTime(time.i)
 EndProcedure
 
 Procedure settings(mode.b)
-  Shared myhost.s,mylogin.s,mypass.s,myutime.l,shittyicons.b,customSensors.s
+  Shared myhost.s,mylogin.s,mypass.s,myutime.l,shittyicons.b,customSensors.s,notifyMode.b
   Protected config.s = GetEnvironmentVariable("HOME") + "/.config"
   If FileSize(config) <> -2 : CreateDirectory(config) : EndIf
   config + "/iPRTGn"
@@ -55,6 +58,14 @@ Procedure settings(mode.b)
     mypass = encDec(ReadPreferenceString("pass",""),#decode)
     myutime = ReadPreferenceInteger("update_time",#mydefutime)
     customSensors = ReadPreferenceString("custom_sensors","")
+    Select ReadPreferenceString("notify_mode","device")
+      Case "sensor"
+        notifyMode = #sensor
+      Case "both"
+        notifyMode = #both
+      Default
+        notifyMode = #device
+    EndSelect
     If ReadPreferenceString("shitty_icons","no") = "no"
       shittyicons = #False
     Else
@@ -77,6 +88,17 @@ Procedure settings(mode.b)
     WritePreferenceString("pass",encDec(mypass,#encode))
     WritePreferenceInteger("update_time",myutime)
     WritePreferenceString("custom_sensors",customSensors)
+    Select GetGadgetState(#notifytype)
+      Case #sensor
+        notifyMode = #sensor
+        WritePreferenceString("notify_mode","sensor")
+      Case #both
+        notifyMode = #both
+        WritePreferenceString("notify_mode","both")
+      Default
+        notifyMode = #device
+        WritePreferenceString("notify_mode","device")
+    EndSelect
     If shittyicons
       WritePreferenceString("shitty_icons","yes")
     Else
@@ -107,7 +129,7 @@ EndProcedure
 Procedure notify(alerts.l,msg.s,url.s)
   Shared mydir.s,myhost.s
   Protected args.s = "-group iPRTGn -title " + #DQUOTE$ + "Alerts: " + Str(alerts) + #DQUOTE$ + " -message " + #DQUOTE$ + msg + #DQUOTE$ + " -open " + #DQUOTE$ + url + #DQUOTE$
-  Debug args
+  ;Debug args
   RunProgram(mydir + "iPRTGn.app/Contents/MacOS/terminal-notifier",args,mydir + "iPRTGn.app/")
 EndProcedure
 
@@ -125,7 +147,7 @@ EndProcedure
 
 Procedure getStat(dummy)
   Shared statData.s,myhost.s,mylogin.s,mypass.s
-  Protected url.s = "http://" + myhost + "/api/table.json?content=sensors&output=json&columns=sensor&filter_status=5&username=" + mylogin + "&password=" + mypass
+  Protected url.s = "http://" + myhost + "/api/table.json?content=sensors&output=json&columns=sensor,device&filter_status=5&username=" + mylogin + "&password=" + mypass
   statData = getData(url)
 EndProcedure
 
@@ -183,7 +205,7 @@ Procedure parseCustom()
 EndProcedure
 
 Procedure checkPRTG(resData.s)
-  Shared myhost.s,mylogin.s,mypass.s,wndHidden.b,state.b,alertsCount.l,curIcon.b,curMsg.s,lastSuccessCheck.i
+  Shared myhost.s,mylogin.s,mypass.s,wndHidden.b,state.b,alertsCount.l,curIcon.b,curMsg.s,lastSuccessCheck.i,notifyMode.b
   Protected msg.s
   If FindString(resData,"Unauthorized")
     MessageRequester(#myname,"Login/password is incorrect!")
@@ -198,10 +220,45 @@ Procedure checkPRTG(resData.s)
       Protected alerts.alerts
       ExtractJSONStructure(JSONValue(0),@alerts.alerts,alerts)
       Protected curAlerts = alerts\treesize
-      ForEach alerts\sensors()
-        Debug alerts\sensors()\sensor
-        msg + alerts\sensors()\sensor + ", "
-      Next
+      Select notifyMode
+        Case #sensor
+          ;Debug "sensor"
+          ForEach alerts\sensors()
+            msg + alerts\sensors()\sensor + ", "
+          Next
+        Case #both
+          ;Debug "both"
+          Protected NewMap both.s()
+          ForEach alerts\sensors()
+            If Len(both(alerts\sensors()\device))
+              both(alerts\sensors()\device) + "," + alerts\sensors()\sensor
+            Else
+              both(alerts\sensors()\device) = alerts\sensors()\sensor
+            EndIf
+          Next
+          ForEach both()
+            msg + MapKey(both()) + "[" + both() + "], "
+          Next
+        Default
+          ;Debug "device"
+          Protected NewList devices.s()
+          ForEach alerts\sensors()
+            AddElement(devices())
+            devices() = alerts\sensors()\device
+          Next
+          SortList(devices(),#PB_Sort_Ascending)
+          Protected prev.s
+          ForEach devices()
+            If devices() <> prev
+              prev = devices()
+            Else
+              DeleteElement(devices())
+            EndIf
+          Next
+          ForEach devices()
+            msg + devices() + ", "
+          Next
+      EndSelect
       If curAlerts : msg = Left(msg,Len(msg)-2) : EndIf
       ;Debug curAlerts
       ;Debug msg

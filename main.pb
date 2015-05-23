@@ -5,7 +5,7 @@ IncludeFile "curl/libcurl-res.pb"
 IncludeFile "curl/libcurl-inc.pb"
 IncludeFile "const.pb"
 Define mydir.s = GetPathPart(ProgramFilename())
-Define myhost.s,mylogin.s,mypass.s,myutime.l,shittyicons.b,state.b,alertsCount.l,curIcon.b,curIconSet.b,customSensors.s,curMsg.s,wndHidden.b
+Define myhost.s,mylogin.s,mypass.s,myutime.l,shittyicons.b,state.b,alertsCount.l,curIcon.b,curIconSet.b,customSensors.s,curMsg.s,wndHidden.b,notifyMode.b
 Define ItemLength.CGFloat,StatusBar.i,StatusItem.i
 Define statData.s,statThread.i,customThread.i
 Define globalLock.i = CreateMutex()
@@ -32,7 +32,12 @@ StringGadget(#login,165,60,140,20,mylogin)
 StringGadget(#pass,165,90,140,20,mypass,#PB_String_Password)
 StringGadget(#utime,165,120,90,20,Str(myutime),#PB_String_Numeric)
 FrameGadget(#fAdd,10,160,380,55,"Additional settings")
-CheckBoxGadget(#shittyicons,20,182,200,20,"Enable big icons")
+CheckBoxGadget(#shittyicons,20,182,180,20,"Enable big icons")
+ComboBoxGadget(#notifytype,200,184,180,20)
+AddGadgetItem(#notifytype,#device,"Print device")
+AddGadgetItem(#notifytype,#sensor,"Print sensor")
+AddGadgetItem(#notifytype,#both,"Print device and sensor")
+SetGadgetState(#notifytype,notifyMode)
 If shittyicons : SetGadgetState(#shittyicons,#PB_Checkbox_Checked) : EndIf
 FrameGadget(#fCustom,10,223,380,55,"Custom sensors (ids, comma separated)")
 StringGadget(#custom,20,245,360,20,customSensors)
