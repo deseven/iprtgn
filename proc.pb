@@ -1,4 +1,5 @@
 ﻿Declare.s encDec(string.s,mode.b)
+Declare toLog(msg.s)
 Declare Die()
 Declare.s buildTime(time.i)
 Declare settings(mode.b)
@@ -17,6 +18,20 @@ Declare updateMenu()
 Declare trayUpdate()
 Declare check()
 
+Procedure toLog(msg.s)
+  Shared enableDebug.b
+  Protected log.s,logdate.s
+  If enableDebug
+    log = GetEnvironmentVariable("HOME") + "/.config/iPRTGn/debug.log"
+    If OpenFile(0,log,#PB_File_Append)
+      logdate = FormatDate("[%dd.%mm.%yy %hh:%ii:%ss] ",Date())
+      WriteStringN(0,logdate + msg)
+      CloseFile(0)
+    EndIf
+  EndIf
+  Debug msg
+EndProcedure
+
 Procedure.s encDec(string.s,mode.b)
   If Len(string)
     Protected res.s = Space(1024)
@@ -33,6 +48,8 @@ Procedure Die()
   Shared statThread.i,customThread.i
   If IsThread(statThread) : KillThread(statThread) : EndIf
   If IsThread(customThread) : KillThread(customThread) : EndIf
+  settings(#save)
+  toLog("exiting")
   End 0
 EndProcedure
 
@@ -46,7 +63,7 @@ Procedure.s buildTime(time.i)
 EndProcedure
 
 Procedure settings(mode.b)
-  Shared myhost.s,mylogin.s,mypass.s,myutime.l,shittyicons.b,customSensors.s,notifyMode.b
+  Shared myhost.s,mylogin.s,mypass.s,myutime.l,shittyicons.b,customSensors.s,notifyMode.b,enableDebug.b
   Protected config.s = GetEnvironmentVariable("HOME") + "/.config"
   If FileSize(config) <> -2 : CreateDirectory(config) : EndIf
   config + "/iPRTGn"
@@ -58,6 +75,11 @@ Procedure settings(mode.b)
     mypass = encDec(ReadPreferenceString("pass",""),#decode)
     myutime = ReadPreferenceInteger("update_time",#mydefutime)
     customSensors = ReadPreferenceString("custom_sensors","")
+    If ReadPreferenceString("enable_debug","no") = "yes"
+      enableDebug = #True
+    Else
+      enableDebug = #False
+    EndIf
     Select ReadPreferenceString("notify_mode","device")
       Case "sensor"
         notifyMode = #sensor
@@ -66,10 +88,10 @@ Procedure settings(mode.b)
       Default
         notifyMode = #device
     EndSelect
-    If ReadPreferenceString("shitty_icons","no") = "no"
-      shittyicons = #False
-    Else
+    If ReadPreferenceString("shitty_icons","no") = "yes"
       shittyicons = #True
+    Else
+      shittyicons = #False
     EndIf
     Debug myhost + "," + mylogin + "," + mypass + "," + Str(myutime)
   Else
@@ -88,6 +110,11 @@ Procedure settings(mode.b)
     WritePreferenceString("pass",encDec(mypass,#encode))
     WritePreferenceInteger("update_time",myutime)
     WritePreferenceString("custom_sensors",customSensors)
+    If enableDebug
+      WritePreferenceString("enable_debug","yes")
+    Else
+      WritePreferenceString("enable_debug","no")
+    EndIf
     Select GetGadgetState(#notifytype)
       Case #sensor
         notifyMode = #sensor
@@ -129,20 +156,24 @@ EndProcedure
 Procedure notify(alerts.l,msg.s,url.s)
   Shared mydir.s,myhost.s
   Protected args.s = "-group iPRTGn -title " + #DQUOTE$ + "Alerts: " + Str(alerts) + #DQUOTE$ + " -message " + #DQUOTE$ + msg + #DQUOTE$ + " -open " + #DQUOTE$ + url + #DQUOTE$
-  ;Debug args
+  toLog("running notify with args [" + args + "]")
   RunProgram(mydir + "iPRTGn.app/Contents/MacOS/terminal-notifier",args,mydir + "iPRTGn.app/")
 EndProcedure
 
 Procedure.s getData(url.s)
   Protected res.b,resData.s,curl.i
   curl = curl_easy_init()
-  curl_easy_setopt(curl,#CURLOPT_URL,@url)
-  curl_easy_setopt(curl,#CURLOPT_IPRESOLVE,#CURL_IPRESOLVE_V4)
-  curl_easy_setopt(curl,#CURLOPT_WRITEFUNCTION,@RW_LibCurl_WriteFunction())
-  res.b = curl_easy_perform(curl)
-  resData.s = RW_LibCurl_GetData()
-  curl_easy_cleanup(curl.i)
-  ProcedureReturn resData
+  If curl
+    curl_easy_setopt(curl,#CURLOPT_URL,@url)
+    curl_easy_setopt(curl,#CURLOPT_IPRESOLVE,#CURL_IPRESOLVE_V4)
+    curl_easy_setopt(curl,#CURLOPT_WRITEFUNCTION,@RW_LibCurl_WriteFunction())
+    res.b = curl_easy_perform(curl)
+    resData.s = RW_LibCurl_GetData()
+    curl_easy_cleanup(curl.i)
+    ProcedureReturn resData
+  Else
+    toLog("can't init curl")
+  EndIf
 EndProcedure
 
 Procedure getStat(dummy)
@@ -183,9 +214,9 @@ EndProcedure
 
 Procedure parseCustom()
   Shared globalLock.i,custom.sensor()
+  toLog("parsing custom sensors")
   CreateRegularExpression(#name,"<name>\s*<!\[CDATA\[(.*)\]\]>\s*<\/name>")
   CreateRegularExpression(#lastvalue,"<lastvalue>\s*<!\[CDATA\[(.*)\]\]>\s*<\/lastvalue>")
-  ;Debug custom()\sData
   LockMutex(globalLock)
   ForEach custom()
     If ExamineRegularExpression(#name,custom()\sData)
@@ -208,6 +239,7 @@ Procedure checkPRTG(resData.s)
   Shared myhost.s,mylogin.s,mypass.s,wndHidden.b,state.b,alertsCount.l,curIcon.b,curMsg.s,lastSuccessCheck.i,notifyMode.b
   Protected msg.s
   If FindString(resData,"Unauthorized")
+    toLog("login/password incorrect, setting state to #sErr")
     MessageRequester(#myname,"Login/password is incorrect!")
     mylogin = ""
     mypass = ""
@@ -222,12 +254,12 @@ Procedure checkPRTG(resData.s)
       Protected curAlerts = alerts\treesize
       Select notifyMode
         Case #sensor
-          ;Debug "sensor"
+          toLog("parsing data with #sensor mode")
           ForEach alerts\sensors()
             msg + alerts\sensors()\sensor + ", "
           Next
         Case #both
-          ;Debug "both"
+          toLog("parsing data with #both mode")
           Protected NewMap both.s()
           ForEach alerts\sensors()
             If Len(both(alerts\sensors()\device))
@@ -240,7 +272,7 @@ Procedure checkPRTG(resData.s)
             msg + MapKey(both()) + "[" + both() + "], "
           Next
         Default
-          ;Debug "device"
+          toLog("parsing data with #device mode")
           Protected NewList devices.s()
           ForEach alerts\sensors()
             AddElement(devices())
@@ -260,10 +292,9 @@ Procedure checkPRTG(resData.s)
           Next
       EndSelect
       If curAlerts : msg = Left(msg,Len(msg)-2) : EndIf
-      ;Debug curAlerts
-      ;Debug msg
       If curAlerts <> alertsCount And msg <> curMsg
         If curAlerts
+          toLog("sending notify about " + Str(curAlerts) + " alerts")
           notify(curAlerts,msg,"http://" + myhost + "/alarms.htm?filter_status=5&filter_status=4&filter_status=10&filter_status=13&filter_status=14")
         EndIf
         alertsCount = curAlerts
@@ -273,10 +304,12 @@ Procedure checkPRTG(resData.s)
       SetMenuItemText(#menu,#info,"Alerts: " + Str(curAlerts))
       lastSuccessCheck = ElapsedMilliseconds()
     Else
+      toLog("data is not a JSON!")
       curIcon = #okconn
       ProcedureReturn
     EndIf
   Else
+    toLog("curl returned no data!")
     curIcon = #okconn
     ProcedureReturn
   EndIf
@@ -284,6 +317,7 @@ EndProcedure
 
 Procedure menuActions()
   Shared globalLock.i,myhost.s,wndHidden.b,state.b,custom.sensor()
+  toLog("clicked menu")
   Select EventMenu()
     Case #info
       RunProgram("open","http://" + myhost + "/alarms.htm?filter_status=5&filter_status=4&filter_status=10&filter_status=13&filter_status=14","")
@@ -316,6 +350,7 @@ Procedure buildMenu()
     ItemLength.CGFloat = 32
     StatusBar.i = CocoaMessage(0,0,"NSStatusBar systemStatusBar")
     StatusItem.i = CocoaMessage(0,CocoaMessage(0,StatusBar,"statusItemWithLength:",#NSSquareStatusBarItemLength), "retain")
+    toLog("registered app for status bar")
   EndIf
   If IsMenu(#menu) : FreeMenu(#menu) : EndIf
   CreatePopupMenu(#menu)
@@ -345,6 +380,7 @@ Procedure buildMenu()
   CocoaMessage(0,StatusItem,"setLength:@",@ItemLength)
   CocoaMessage(0,StatusItem,"setImage:",ImageID(curIconSet))
   CocoaMessage(0,StatusItem,"setMenu:",CocoaMessage(0,MenuID(#menu),"firstObject"))
+  toLog("binded menu actions")
 EndProcedure
 
 Procedure updateMenu()
@@ -388,12 +424,15 @@ Procedure check()
   If Not (Len(myhost) And Len(mylogin) And Len(mypass) And myutime)
     state = #sErr
     HideWindow(#wnd,#False,#PB_Window_ScreenCentered) : wndHidden = #False
+    toLog("do not have enough data to perform checks, setting state to #sErr")
   Else
     state = #sOk
     lastCheck = -myutime*1000
+    toLog("everything seems to be ok, setting state to #sOk")
   EndIf
   buildCustom()
   buildMenu()
+  toLog("finished building menu and custom sensors list")
   If shittyicons : createShittyIcons() : Else : createIcons() : EndIf
   curIconSet = -1
 EndProcedure

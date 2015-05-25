@@ -13,14 +13,16 @@ Define lastCheck.i = 0
 Define lastSuccessCheck.i = 0
 Define lastTrayUpdate.i = 0
 Define dummy.i
+Define enableDebug.b = #False
 NewList custom.sensor()
 IncludeFile "proc.pb"
 settings(#load)
 If shittyicons : createShittyIcons() : Else : createIcons() : EndIf
 curIcon = #okconn
 curIconSet = #okconn
-
 wndHidden = #True
+toLog("init finished")
+
 OpenWindow(#wnd,#PB_Ignore,#PB_Ignore,400,310,#myname,#PB_Window_SystemMenu|#PB_Window_ScreenCentered|#PB_Window_Invisible)
 FrameGadget(#fMain,10,10,380,142,"Main settings")
 TextGadget(#hostCap,20,32,145,20,"PRTG (hostname:port)")
@@ -43,36 +45,35 @@ FrameGadget(#fCustom,10,223,380,55,"Custom sensors (ids, comma separated)")
 StringGadget(#custom,20,245,360,20,customSensors)
 ButtonGadget(#apply,290,280,100,25,"Apply",#PB_Button_Default)
 ButtonGadget(#cancel,190,280,100,25,"Cancel")
+toLog("window created")
 
 check()
 AddKeyboardShortcut(#wnd,#PB_Shortcut_Return,#enter)
 StickyWindow(#wnd,#True)
 
 Repeat
-  Define ev = WaitWindowEvent(100)
-  If CocoaMessage(0,WindowID(#wnd),"isVisible") And wndHidden
-    HideWindow(#wnd,#True)
-    RunProgram("open","http://" + myhost,"")
-  EndIf
+  Define ev = WaitWindowEvent(250)
   If ElapsedMilliseconds() - lastCheck >= myutime*1000 And state = #sOk And Not statThread
     statThread = CreateThread(@getStat(),dummy)
-    Debug "started stat tid " + Str(statThread)
+    toLog("started stat tid " + Str(statThread))
   ElseIf ElapsedMilliseconds() - lastCheck >= myutime*1000 And state = #sOk And statThread And Not IsThread(statThread)
     If Not customThread
       customThread = CreateThread(@getCustom(),dummy)
-      Debug "started custom tid " + Str(customThread)
+      toLog("started custom tid " + Str(customThread))
     ElseIf Not IsThread(customThread)
+      toLog("threads finished, starting parsing operations")
       checkPRTG(statData)
       parseCustom()
       updateMenu()
       ForEach custom()
-        Debug "[" + custom()\id + "," + custom()\name + "," + custom()\lastvalue + "]"
+        toLog("custom [" + custom()\id + "," + custom()\name + "," + custom()\lastvalue + "]")
       Next
       If lastSuccessCheck
         If lastSuccessCheck < ElapsedMilliseconds() - myutime
           SetMenuItemText(#menu,#info,"Alerts: " + Str(alertsCount) + " (" + buildTime(ElapsedMilliseconds()-lastSuccessCheck) + ")")
         EndIf
       Else
+        toLog("haven't got new data for at least " + Str(myutime) + " seconds")
         SetMenuItemText(#menu,#info,"Alerts: " + Str(alertsCount) + " - updating...")
       EndIf
       lastCheck = ElapsedMilliseconds()
