@@ -7,7 +7,7 @@ IncludeFile "const.pb"
 Define mydir.s = GetPathPart(ProgramFilename())
 Define myhost.s,mylogin.s,mypass.s,myutime.l,shittyicons.b,state.b,alertsCount.l,curIcon.b,curIconSet.b,customSensors.s,curMsg.s,wndHidden.b,notifyMode.b
 Define ItemLength.CGFloat,StatusBar.i,StatusItem.i
-Define statData.s,statThread.i,customThread.i
+Define statData.s,statThread.i,customThread.i,threadStarted.i
 Define globalLock.i = CreateMutex()
 Define lastCheck.i = 0
 Define lastSuccessCheck.i = 0
@@ -55,6 +55,7 @@ Repeat
   Define ev = WaitWindowEvent(250)
   If ElapsedMilliseconds() - lastCheck >= myutime*1000 And state = #sOk And Not statThread
     statThread = CreateThread(@getStat(),dummy)
+    threadStarted = ElapsedMilliseconds()
     toLog("started stat tid " + Str(statThread))
   ElseIf ElapsedMilliseconds() - lastCheck >= myutime*1000 And state = #sOk And statThread And Not IsThread(statThread)
     If Not customThread
@@ -79,6 +80,18 @@ Repeat
       lastCheck = ElapsedMilliseconds()
       statThread = 0
       customThread = 0
+    EndIf
+  EndIf
+  If statThread Or customThread
+    If ElapsedMilliseconds() - #tTimeout > threadStarted
+      If IsThread(statThread)
+        KillThread(statThread)
+        toLog("!!! killed stat thread because of timeout")
+      EndIf
+      If IsThread(customThread)
+        KillThread(customThread)
+        toLog("!!! killed custom thread because of timeout")
+      EndIf
     EndIf
   EndIf
   If ElapsedMilliseconds() - lastTrayUpdate >= #trayupdate
