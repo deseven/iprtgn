@@ -1,10 +1,10 @@
 ﻿#myname = "iPRTGn"
-#myver = "0.6.2"
+#myver = "0.6.3"
 #mydefhost = "monitoring.home-nadym.ru:12345"
 #mydefutime = 30
 #seed = 10100100011
 #trayupdate = 500
-#tTimeout = 20000
+#tTimeout = 30
 #NSSquareStatusBarItemLength = -2
 
 Enumeration main

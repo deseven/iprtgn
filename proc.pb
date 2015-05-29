@@ -166,6 +166,7 @@ Procedure.s getData(url.s)
   If curl
     curl_easy_setopt(curl,#CURLOPT_URL,@url)
     curl_easy_setopt(curl,#CURLOPT_IPRESOLVE,#CURL_IPRESOLVE_V4)
+    curl_easy_setopt(curl,#CURLOPT_TIMEOUT,#tTimeout);
     curl_easy_setopt(curl,#CURLOPT_WRITEFUNCTION,@RW_LibCurl_WriteFunction())
     res.b = curl_easy_perform(curl)
     resData.s = RW_LibCurl_GetData()

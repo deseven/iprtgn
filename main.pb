@@ -83,14 +83,20 @@ Repeat
     EndIf
   EndIf
   If statThread Or customThread
-    If ElapsedMilliseconds() - #tTimeout > threadStarted
+    If ElapsedMilliseconds() - #tTimeout*2000 > threadStarted
       If IsThread(statThread)
+        toLog("!!! it seems that the stat thread is hanged, trying to recover")
         KillThread(statThread)
-        toLog("!!! killed stat thread because of timeout")
+        toLog("!!! killed stat thread " + Str(statThread))
       EndIf
       If IsThread(customThread)
+        toLog("!!! it seems that the custom thread is hanged, trying to recover")
         KillThread(customThread)
-        toLog("!!! killed custom thread because of timeout")
+        toLog("!!! killed custom thread " + Str(customThread))
+        FreeMutex(globalLock)
+        globalLock = CreateMutex()
+        UnlockMutex(globalLock)
+        toLog("!!! recreated global lock mutex")
       EndIf
     EndIf
   EndIf
