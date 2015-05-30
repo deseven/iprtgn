@@ -63,6 +63,14 @@ Repeat
       toLog("started custom tid " + Str(customThread))
     ElseIf Not IsThread(customThread)
       toLog("threads finished, starting parsing operations")
+      If TryLockMutex(globalLock)
+        UnlockMutex(globalLock)
+      Else
+        FreeMutex(globalLock)
+        globalLock = CreateMutex()
+        UnlockMutex(globalLock)
+        toLog("!!! recreated global lock mutex")
+      EndIf
       checkPRTG(statData)
       parseCustom()
       updateMenu()
@@ -83,20 +91,16 @@ Repeat
     EndIf
   EndIf
   If statThread Or customThread
-    If ElapsedMilliseconds() - #tTimeout*2000 > threadStarted
+    If ElapsedMilliseconds() - #tTimeout*3000 > threadStarted
       If IsThread(statThread)
-        toLog("!!! it seems that the stat thread is hanged, trying to recover")
+        toLog("!!! it seems that the thread is hanged, trying to recover")
         KillThread(statThread)
-        toLog("!!! killed stat thread " + Str(statThread))
+        toLog("!!! killed thread " + Str(statThread))
       EndIf
       If IsThread(customThread)
-        toLog("!!! it seems that the custom thread is hanged, trying to recover")
+        toLog("!!! it seems that the thread is hanged, trying to recover")
         KillThread(customThread)
-        toLog("!!! killed custom thread " + Str(customThread))
-        FreeMutex(globalLock)
-        globalLock = CreateMutex()
-        UnlockMutex(globalLock)
-        toLog("!!! recreated global lock mutex")
+        toLog("!!! killed thread " + Str(customThread))
       EndIf
     EndIf
   EndIf
