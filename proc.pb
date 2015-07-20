@@ -155,6 +155,7 @@ EndProcedure
 
 Procedure notify(alerts.l,msg.s,url.s)
   Shared mydir.s,myhost.s
+  msg = ReplaceString(msg,#DQUOTE$,"'")
   Protected args.s = "-group iPRTGn -title " + #DQUOTE$ + "Alerts: " + Str(alerts) + #DQUOTE$ + " -message " + #DQUOTE$ + msg + #DQUOTE$ + " -open " + #DQUOTE$ + url + #DQUOTE$
   toLog("running notify with args [" + args + "]")
   RunProgram(mydir + "iPRTGn.app/Contents/MacOS/terminal-notifier",args,mydir + "iPRTGn.app/")
@@ -166,7 +167,7 @@ Procedure.s getData(url.s)
   If curl
     curl_easy_setopt(curl,#CURLOPT_URL,@url)
     curl_easy_setopt(curl,#CURLOPT_IPRESOLVE,#CURL_IPRESOLVE_V4)
-    curl_easy_setopt(curl,#CURLOPT_TIMEOUT,#tTimeout);
+    curl_easy_setopt(curl,#CURLOPT_TIMEOUT,#tTimeout)
     curl_easy_setopt(curl,#CURLOPT_WRITEFUNCTION,@RW_LibCurl_WriteFunction())
     res.b = curl_easy_perform(curl)
     resData.s = RW_LibCurl_GetData()
@@ -356,6 +357,7 @@ Procedure buildMenu()
   If IsMenu(#menu) : FreeMenu(#menu) : EndIf
   CreatePopupMenu(#menu)
   MenuItem(#info,"Alerts: " + Str(alertsCount))
+  UnbindMenuEvent(#menu,#info,@menuActions())
   BindMenuEvent(#menu,#info,@menuActions())
   MenuBar()
   LockMutex(globalLock)

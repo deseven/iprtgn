@@ -1,5 +1,5 @@
 ﻿#myname = "iPRTGn"
-#myver = "0.6.4"
+#myver = "0.6.5"
 #mydefhost = "monitoring.home-nadym.ru:12345"
 #mydefutime = 30
 #seed = 10100100011
