@@ -1,8 +1,9 @@
 ﻿; init
 EnableExplicit
 UsePNGImageDecoder()
-IncludeFile "curl/libcurl-res.pb"
-IncludeFile "curl/libcurl-inc.pb"
+;IncludeFile "curl/libcurl-res.pb"
+;IncludeFile "curl/libcurl-inc.pb"
+IncludeFile "curl/libcurl.pbi"
 IncludeFile "const.pb"
 Define mydir.s = GetPathPart(ProgramFilename())
 Define myhost.s,mylogin.s,mypass.s,myutime.l,shittyicons.b,state.b,alertsCount.l,curIcon.b,curIconSet.b,customSensors.s,curMsg.s,wndHidden.b,notifyMode.b

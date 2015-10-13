@@ -17,7 +17,7 @@
   <key>CFBundleSignature</key>
   <string>PURE</string>
   <key>CFBundleVersion</key>
-  <string>0.1</string>
+  <string>0.6.6</string>
   <key>CFBundleName</key>
   <string>iPRTGn</string>
   <key>CSResourcesFileMapped</key>
@@ -29,7 +29,7 @@
   <key>NSDisablePersistence</key>
   <true/>
   <key>LSMinimumSystemVersion</key>
-  <string>10.10</string>
+  <string>10.9</string>
   <key>NSAppleScriptEnabled</key>
   <false/>
 </dict>
